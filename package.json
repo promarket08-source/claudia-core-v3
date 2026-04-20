@@ -1,0 +1,9 @@
+{
+  "name": "claudia-core-v3",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "grammy": "^1.21.1",
+    "@google/generative-ai": "^0.21.0"
+  }
+}
