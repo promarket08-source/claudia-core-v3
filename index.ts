@@ -2,8 +2,8 @@ import { Bot, webhookCallback } from "grammy"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
 const bot = new Bot("8754625349:AAFi4gNbjvm-vPfvkJX2wkwHAEkfglmbEL4")
-const genAI = new GoogleGenerativeAI("AIzaSyBxVGIQMOOaEipD2rGZOfVGTGyrsvuhysU")
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
+const genAI = new GoogleGenerativeAI("AIzaSyArZy2YA-1m6ao1OYFerQQGoXvtsluNEgE")
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 
 const SYSTEM_CONTEXT = `
 Eres Claudia, la Agente Autónoma de PROMARKET. 
