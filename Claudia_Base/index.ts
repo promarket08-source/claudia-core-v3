@@ -125,15 +125,15 @@ async function saveToMemory(tipo: string, titulo: string, contenido: string, url
 }
 
 async function searchMemory(query: string): Promise<string> {
-  if (!db) return ""
-  const snap = await db.collection("memoria_maestra").get()
-  const results = snap.docs.filter(d => {
-    const data = d.data()
-    return data.titulo?.toLowerCase().includes(query.toLowerCase()) ||
-           data.contenido?.toLowerCase().includes(query.toLowerCase())
-  })
-  if (!results.length) return ""
-  return results.slice(0, 3).map(r => `• ${r.data().titulo}: ${r.data().contenido?.slice(0, 100)}...`).join("\n")
+  if (!db) return "";
+  const snap = await db.collection("memoria_maestra").get();
+  const filteredDocs = snap.docs.filter(doc => {
+    const record = doc.data();
+    return record.titulo?.toLowerCase().includes(query.toLowerCase()) ||
+           record.contenido?.toLowerCase().includes(query.toLowerCase());
+  });
+  if (!filteredDocs.length) return "";
+  return filteredDocs.slice(0, 3).map(res => `• ${res.data().titulo}: ${res.data().contenido?.slice(0, 100)}...`).join("\n");
 }
 
 async function assignTask(assignedTo: string, titulo: string, descripcion: string) {
