@@ -291,11 +291,15 @@ export default async function handler(req: any, res: any) {
     return
   }
   
-  try {
-    await handleUpdate(req, res)
-  } catch (e) {
-    console.error(e)
-    res.writeHead(500)
-    res.end("Error")
+  if (req.method === "POST") {
+    try {
+      await handleUpdate(req, res)
+      return
+    } catch (e) {
+      console.error("Webhook error:", e)
+    }
   }
+  
+  res.writeHead(200)
+  res.end("Claudia Bot Running")
 }
