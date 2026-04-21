@@ -45,7 +45,7 @@ async function getKnowledge(nombre: string): Promise<any> {
 async function searchKnowledge(categoria: string): Promise<string> {
   if (!db) return ""
   const snap = await db.collection("boveda_maestro").where("categoria", "==", categoria).get()
-  if (!snap.empty) return snap.docs.map(d => `${d.id}: ${JSON.stringify(d.data().datos)}`).join("\n")
+  if (!snap.empty) return snap.docs.map(doc => `${doc.id}: ${JSON.stringify(doc.data().datos)}`).join("\n")
   return ""
 }
 
@@ -125,15 +125,15 @@ async function saveToMemory(tipo: string, titulo: string, contenido: string, url
 }
 
 async function searchMemory(query: string): Promise<string> {
-  if (!db) return "";
-  const snap = await db.collection("memoria_maestra").get();
-  const filteredDocs = snap.docs.filter(doc => {
-    const record = doc.data();
-    return record.titulo?.toLowerCase().includes(query.toLowerCase()) ||
-           record.contenido?.toLowerCase().includes(query.toLowerCase());
-  });
-  if (!filteredDocs.length) return "";
-  return filteredDocs.slice(0, 3).map(res => `• ${res.data().titulo}: ${res.data().contenido?.slice(0, 100)}...`).join("\n");
+  if (!db) return ""
+  const snap = await db.collection("memoria_maestra").get()
+  const results = snap.docs.filter(doc => {
+    const data = doc.data()
+    return data.titulo?.toLowerCase().includes(query.toLowerCase()) ||
+           data.contenido?.toLowerCase().includes(query.toLowerCase())
+  })
+  if (!results.length) return ""
+  return results.slice(0, 3).map(res => `• ${res.data().titulo}: ${res.data().contenido?.slice(0, 100)}...`).join("\n")
 }
 
 async function assignTask(assignedTo: string, titulo: string, descripcion: string) {
@@ -146,8 +146,8 @@ async function assignTask(assignedTo: string, titulo: string, descripcion: strin
 async function checkTeamProgress(usuario: string) {
   if (!db) return "📡 Sin DB."
   const snap = await db.collection("tareas").where("assignedTo", "==", usuario).get()
-  const pendientes = snap.docs.filter(d => d.data().status === "pendiente").length
-  const completadas = snap.docs.filter(d => d.data().status === "completada").length
+  const pendientes = snap.docs.filter(doc => doc.data().status === "pendiente").length
+  const completadas = snap.docs.filter(doc => doc.data().status === "completada").length
   return `👤 ${usuario}:\n• Pendientes: ${pendientes}\n• Completadas: ${completadas}`
 }
 
@@ -197,7 +197,7 @@ h1{font-size:2.5rem;margin-bottom:20px;background:linear-gradient(90deg,#ff6b6b,
 .card{max-width:600px;background:rgba(255,255,255,0.05);border-radius:20px;padding:40px;border:1px solid rgba(255,255,255,0.1)}
 h1{font-size:2.5rem;margin-bottom:20px;background:linear-gradient(90deg,#e94560,#0f3460);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .price{font-size:2rem;color:#e94560;margin:20px 0}
-.btn{display:inline-block;padding:15px 40px;background:linear-gradient(90deg,#e94560,#ff6b6b);color:#fff;text-decoration:none;border-radius:30px;font-weight:bold;margin-top:20px}
+btn{display:inline-block;padding:15px 40px;background:linear-gradient(90deg,#e94560,#ff6b6b);color:#fff;text-decoration:none;border-radius:30px;font-weight:bold;margin-top:20px}
 .features{list-style:none;padding:0}.features li{padding:8px 0}
 </style></head>
 <body><div class="hero"><div class="card">
@@ -517,7 +517,7 @@ bot.command("proyectos", async (ctx) => {
     const snapshot = await db!.collection("proyectos").get()
     if (snapshot.empty) { await ctx.reply("📋 No hay proyectos."); return }
     let text = "📋 *PROYECTOS:*\n\n"
-    snapshot.docs.forEach(d => { const p = d.data(); text += `• ${p.name} (${p.tipo})\n` })
+    snapshot.docs.forEach(doc => { const p = doc.data(); text += `• ${p.name} (${p.tipo})\n` })
     await ctx.reply(text, { parse_mode: "Markdown" })
   } catch (e) { await ctx.reply("❌ Error.") }
 })
@@ -553,8 +553,8 @@ bot.command("usuarios", async (ctx) => {
   const snapshot = await db.collection("usuarios").get()
   if (snapshot.empty) { await ctx.reply("👥 No hay usuarios."); return }
   let text = "👥 *USUARIOS:*\n\n"
-  snapshot.docs.forEach(d => {
-    const u = d.data()
+  snapshot.docs.forEach(doc => {
+    const u = doc.data()
     text += `• ${u.nombre} (${u.rol})\n  ID: ${u.telegram_id}\n`
   })
   await ctx.reply(text, { parse_mode: "Markdown" })
@@ -627,10 +627,10 @@ bot.command("equipo", async (ctx) => {
   if (!db) { await ctx.reply("📡 Offline."); return }
   const usuarios = await db.collection("usuarios").where("rol", "!=", "admin").get()
   let text = "👥 *EQUIPO:*\n\n"
-  for (const d of usuarios.docs) {
-    const u = d.data()
+  for (const doc of usuarios.docs) {
+    const u = doc.data()
     const tareas = await db.collection("tareas").where("assignedTo", "==", u.nombre).get()
-    const pend = tareas.docs.filter(t => t.data().status === "pendiente").length
+    const pend = tareas.docs.filter(doc => doc.data().status === "pendiente").length
     text += `• ${u.nombre}: ${pend} tareas pendientes\n`
   }
   await ctx.reply(text, { parse_mode: "Markdown" })
@@ -649,8 +649,8 @@ bot.command("memoria", async (ctx) => {
   if (!args) {
     if (!db) { await ctx.reply("📡 Offline."); return }
     const snap = await db.collection("memoria_maestra").get()
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, 10)
-    await ctx.reply(`🧠 *MEMORIA MAESTRA:*\n\n${data.map((x: any) => `• ${x.titulo} (${x.tipo})`).join("\n")}`, { parse_mode: "Markdown" })
+    const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).slice(0, 10)
+    await ctx.reply(`🧠 *MEMORIA MAESTRA:*\n\n${data.map((d: any) => `• ${d.titulo} (${d.tipo})`).join("\n")}`, { parse_mode: "Markdown" })
     return
   }
   const results = await searchMemory(args)
@@ -663,8 +663,8 @@ bot.command("boveda", async (ctx) => {
   if (!args) {
     if (!db) { await ctx.reply("📡 Offline."); return }
     const snap = await db.collection("boveda_maestro").get()
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, 10)
-    await ctx.reply(`🧠 *BÓVEDA MAESTRA:*\n\n${data.map((x: any) => `• ${x.nombre} (${x.categoria})`).join("\n")}`, { parse_mode: "Markdown" })
+    const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).slice(0, 10)
+    await ctx.reply(`🧠 *BÓVEDA MAESTRA:*\n\n${data.map((d: any) => `• ${d.nombre} (${d.categoria})`).join("\n")}`, { parse_mode: "Markdown" })
     return
   }
   const cat = args2[0]
@@ -680,7 +680,7 @@ bot.command("boveda", async (ctx) => {
 bot.command("orquesta", async (ctx) => {
   const args = ctx.message?.text?.replace("/orquesta", "").trim()
   if (!args) { await ctx.reply("📋 Uso: /orquesta [tarea]\nEj: /orquesta crear landing para Julian"); return }
-  const plan = await orchestate(args)
+  const plan = await orchestrate(args)
   await ctx.reply(plan, { parse_mode: "Markdown" })
 })
 
@@ -729,7 +729,7 @@ bot.on("message:document", async (ctx) => {
 
 function getUser(chatId: number) {
   if (!db) return null
-  return db.collection("usuarios").doc(String(chatId)).get().then(d => d.exists ? d.data() : null)
+  return db.collection("usuarios").doc(String(chatId)).get().then(doc => doc.exists ? doc.data() : null)
 }
 
 async function checkAccess(chatId: number): Promise<{allowed: boolean, user?: any}> {
@@ -815,8 +815,8 @@ async function addTask(title: string, client?: string) {
 async function updateIngresos(monto: number, descripcion: string) {
   if (!db) return
   const statsRef = db.collection("stats").doc("ingresos")
-  const d = await statsRef.get()
-  const current = d.exists ? (d.data()?.total || 0) : 0
+  const doc = await statsRef.get()
+  const current = doc.exists ? (doc.data()?.total || 0) : 0
   await statsRef.set({ total: current + monto, updatedAt: new Date() })
   await db.collection("historial_ingresos").add({
     monto, descripcion, createdAt: new Date()
@@ -846,7 +846,7 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
     if (pathname === "/api/clientes") {
       if (!db) { res.writeHead(500, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "NoDB" })); return }
       const snapshot = await db.collection("clientes").get()
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       res.writeHead(200, { "Content-Type": "application/json" })
       res.end(JSON.stringify(data))
       return
@@ -855,7 +855,7 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
     if (pathname === "/api/proyectos") {
       if (!db) { res.writeHead(500, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "NoDB" })); return }
       const snapshot = await db.collection("proyectos").get()
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       res.writeHead(200, { "Content-Type": "application/json" })
       res.end(JSON.stringify(data))
       return
@@ -864,7 +864,7 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
     if (pathname === "/api/tareas") {
       if (!db) { res.writeHead(500, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "NoDB" })); return }
       const snapshot = await db.collection("tareas").get()
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       res.writeHead(200, { "Content-Type": "application/json" })
       res.end(JSON.stringify(data))
       return
@@ -872,8 +872,8 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
     
     if (pathname === "/api/stats") {
       if (!db) { res.writeHead(500, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "NoDB" })); return }
-      const d = await db.collection("stats").doc("ingresos").get()
-      const data = d.exists ? d.data() : { total: 0 }
+      const doc = await db.collection("stats").doc("ingresos").get()
+      const data = doc.exists ? doc.data() : { total: 0 }
       res.writeHead(200, { "Content-Type": "application/json" })
       res.end(JSON.stringify(data))
       return
@@ -883,7 +883,7 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
       if (!db) { res.writeHead(500, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "NoDB" })); return }
       if (req.method === "GET") {
         const snapshot = await db.collection("usuarios").get()
-        const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
         res.writeHead(200, { "Content-Type": "application/json" })
         res.end(JSON.stringify(data))
         return
@@ -915,8 +915,8 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
       if (req.method === "GET") {
         const q = new URL(url, "http://localhost").searchParams.get("q") || ""
         const snapshot = await db.collection("memoria_maestra").get()
-        let data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
-        if (q) data = data.filter((x: any) => x.titulo?.toLowerCase().includes(q.toLowerCase()))
+        let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        if (q) data = data.filter((d: any) => d.titulo?.toLowerCase().includes(q.toLowerCase()))
         res.writeHead(200, { "Content-Type": "application/json" })
         res.end(JSON.stringify(data.slice(0, 20)))
         return
@@ -927,6 +927,41 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
         req.on("end", async () => {
           const { tipo, titulo, contenido, url } = JSON.parse(body)
           await db.collection("memoria_maestra").add({ tipo, titulo, contenido, url, createdAt: new Date() })
+          res.writeHead(200, { "Content-Type": "application/json" })
+          res.end(JSON.stringify({ success: true }))
+        })
+        return
+      }
+    }
+
+    if (pathname === "/api/tareas") {
+      if (!db) { res.writeHead(500, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "NoDB" })); return }
+      if (req.method === "GET") {
+        const user = new URL(url, "http://localhost").searchParams.get("user")
+        let snapshot = await db.collection("tareas").get()
+        let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        if (user) data = data.filter((d: any) => d.assignedTo === user)
+        res.writeHead(200, { "Content-Type": "application/json" })
+        res.end(JSON.stringify(data))
+        return
+      }
+      if (req.method === "POST") {
+        let body = ""
+        req.on("data", chunk => body += chunk)
+        req.on("end", async () => {
+          const { titulo, descripcion, assignedTo } = JSON.parse(body)
+          await db.collection("tareas").add({ titulo, descripcion, assignedTo, status: "pendiente", createdAt: new Date() })
+          res.writeHead(200, { "Content-Type": "application/json" })
+          res.end(JSON.stringify({ success: true }))
+        })
+        return
+      }
+      if (req.method === "PATCH") {
+        let body = ""
+        req.on("data", chunk => body += chunk)
+        req.on("end", async () => {
+          const { id, status } = JSON.parse(body)
+          await db.collection("tareas").doc(id).update({ status })
           res.writeHead(200, { "Content-Type": "application/json" })
           res.end(JSON.stringify({ success: true }))
         })
@@ -949,13 +984,13 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
       if (req.method === "GET") {
         const nombre = new URL(url, "http://localhost").searchParams.get("nombre")
         if (nombre) {
-          const d = await db.collection("boveda_maestro").doc(nombre.toLowerCase().replace(/\s+/g, "_")).get()
+          const doc = await db.collection("boveda_maestro").doc(nombre.toLowerCase().replace(/\s+/g, "_")).get()
           res.writeHead(200, { "Content-Type": "application/json" })
-          res.end(JSON.stringify(d.exists ? d.data() : { error: "No encontrado" }))
+          res.end(JSON.stringify(doc.exists ? doc.data() : { error: "No encontrado" }))
           return
         }
         const snapshot = await db.collection("boveda_maestro").get()
-        const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
         res.writeHead(200, { "Content-Type": "application/json" })
         res.end(JSON.stringify(data))
         return
