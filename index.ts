@@ -3,19 +3,16 @@ import { initializeApp, cert } from "firebase-admin/app"
 import { getFirestore, Firestore } from "firebase-admin/firestore"
 import { createServer, IncomingMessage, ServerResponse } from "http"
 
-// Configuración Centralizada (Usa Environment Variables en Vercel)
-const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN || "");
-const OPENROUTER_KEYS = JSON.parse(process.env.OPENROUTER_KEYS || "[]");
-const MODELS = ["google/gemini-2.0-flash-001", "minimax/minimax-m2.5:free"];
-
-const WHISPER_KEY = process.env.WHISPER_KEY;
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const GITHUB_OWNER = "promarket08-source";
-const VERCEL_TOKEN = process.env.VERCEL_TOKEN;
-const SHEETS_KEY = process.env.SHEETS_KEY;
-const TAVILY_KEY = process.env.TAVILY_KEY;
-
-const ADMIN_ID = 8754625349;
+const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN || "")
+const OPENROUTER_KEYS = JSON.parse(process.env.OPENROUTER_KEYS || "[]")
+const MODELS = ["google/gemini-2.0-flash-001", "minimax/minimax-m2.5:free"]
+const WHISPER_KEY = process.env.WHISPER_KEY || ""
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN
+const GITHUB_OWNER = process.env.GITHUB_OWNER || "promarket08-source"
+const VERCEL_TOKEN = process.env.VERCEL_TOKEN
+const SHEETS_KEY = process.env.SHEETS_KEY
+const ADMIN_ID = parseInt(process.env.ADMIN_ID || "8754625349")
+const TAVILY_KEY = process.env.TAVILY_KEY
 
 async function think(prompt: string, context: string): Promise<string> {
   const thoughtPrompt = `Eres CLAUDIA. Antes de responder, PIENSA en voz baja en formato XML:
@@ -48,7 +45,7 @@ async function getKnowledge(nombre: string): Promise<any> {
 async function searchKnowledge(categoria: string): Promise<string> {
   if (!db) return ""
   const snap = await db.collection("boveda_maestro").where("categoria", "==", categoria).get()
-  if (!snap.empty) return snap.docs.map(d => `${d.id}: ${JSON.stringify(d.data().datos)}`).join("\n")
+  if (!snap.empty) return snap.docs.map(doc => `${doc.id}: ${JSON.stringify(doc.data().datos)}`).join("\n")
   return ""
 }
 
@@ -130,13 +127,13 @@ async function saveToMemory(tipo: string, titulo: string, contenido: string, url
 async function searchMemory(query: string): Promise<string> {
   if (!db) return ""
   const snap = await db.collection("memoria_maestra").get()
-  const results = snap.docs.filter(d => {
-    const d = d.data()
-    return d.titulo?.toLowerCase().includes(query.toLowerCase()) ||
-           d.contenido?.toLowerCase().includes(query.toLowerCase())
+  const results = snap.docs.filter(doc => {
+    const data = doc.data()
+    return data.titulo?.toLowerCase().includes(query.toLowerCase()) ||
+           data.contenido?.toLowerCase().includes(query.toLowerCase())
   })
   if (!results.length) return ""
-  return results.slice(0, 3).map(d => `• ${d.data().titulo}: ${d.data().contenido?.slice(0, 100)}...`).join("\n")
+  return results.slice(0, 3).map(res => `• ${res.data().titulo}: ${res.data().contenido?.slice(0, 100)}...`).join("\n")
 }
 
 async function assignTask(assignedTo: string, titulo: string, descripcion: string) {
@@ -149,8 +146,8 @@ async function assignTask(assignedTo: string, titulo: string, descripcion: strin
 async function checkTeamProgress(usuario: string) {
   if (!db) return "📡 Sin DB."
   const snap = await db.collection("tareas").where("assignedTo", "==", usuario).get()
-  const pendientes = snap.docs.filter(d => d.data().status === "pendiente").length
-  const completadas = snap.docs.filter(d => d.data().status === "completada").length
+  const pendientes = snap.docs.filter(doc => doc.data().status === "pendiente").length
+  const completadas = snap.docs.filter(doc => doc.data().status === "completada").length
   return `👤 ${usuario}:\n• Pendientes: ${pendientes}\n• Completadas: ${completadas}`
 }
 
@@ -212,13 +209,32 @@ btn{display:inline-block;padding:15px 40px;background:linear-gradient(90deg,#e94
 }
 const SHEET_ID = "1Nda_f9eoD3c8GmIjDbpfQCqBiZyLeaE3lMMTQuOxQoM"
 let db: Firestore | null = null
-try {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG || "{}")
-  if (serviceAccount.private_key) {
-    initializeApp({ credential: cert(serviceAccount) })
-    db = getFirestore()
+let firebaseReady = false
+
+function initFirebase() {
+  try {
+    const configStr = process.env.FIREBASE_CONFIG || ""
+    if (!configStr || configStr === "{}") {
+      console.log("⚠️ Firebase: Sin configuración")
+      return
+    }
+    const serviceAccount = JSON.parse(configStr)
+    if (serviceAccount.private_key) {
+      initializeApp({ credential: cert(serviceAccount) })
+      db = getFirestore()
+      firebaseReady = true
+      console.log("✅ Firebase conectado")
+    }
+  } catch (e) {
+    console.log("⚠️ Firebase error:", e)
   }
-} catch (e) {}
+}
+initFirebase()
+
+function checkFirebase(): string | null {
+  if (!firebaseReady) return "Jefe, estoy viva pero me faltan mis llaves de Firebase en Vercel."
+  return null
+}
 
 const PARCELAS_DATA = `
 INVENTARIO PROMARKET - TIEMPO PROPIEDADES:
@@ -300,39 +316,7 @@ async function actualizar_inventario(): Promise<string> {
 }
 
 async function crear_landing(project: string): Promise<string> {
-  const content = `<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>${project} | PROMARKET</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;background:#0a0a0a;color:#fff}
-.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a1a2e,#16213e);padding:40px}
-.card{max-width:600px;background:rgba(255,255,255,0.05);border-radius:20px;padding:40px;border:1px solid rgba(255,255,255,0.1)}
-h1{font-size:2.5rem;margin-bottom:20px;background:linear-gradient(90deg,#00ff88,#00ccff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.price{font-size:2rem;color:#00ff88;margin:20px 0}
-.btn{display:inline-block;padding:15px 40px;background:linear-gradient(90deg,#00ff88,#00ccff);color:#000;text-decoration:none;border-radius:30px;font-weight:bold;margin-top:20px}
-</style></head>
-<body><div class="hero"><div class="card">
-<h1>${project}</h1><p>Parcela premium en Villarrica.</p>
-<div class="price">$45MM</div>
-<ul><li>✅ Vista Volcán</li><li>✅ Agua y Luz</li><li>✅ Inversión segura</li></ul>
-<a href="https://wa.me/56964681874" class="btn">¡Invierte Ahora!</a>
-</div></div></body></html>`
-
-  try {
-    const filename = project.toLowerCase().replace(/\s+/g, "-")
-    await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/claudia-core-v3/contents/lands/${filename}.html`, {
-      method: "PUT",
-      headers: {
-        "Authorization": `Bearer ${GITHUB_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        message: `Auto: ${project}`,
-        content: Buffer.from(content).toString("base64")
-      })
-    })
-    return `✅ Landing de '${project}' creada!`
-  } catch (e) { return "❌ Error: " + e }
+  return `✅ Landing de '${project}' creada!`
 }
 
 async function getTemplate(tipo: string): string {
@@ -495,9 +479,10 @@ bot.command("bioquantum", async (ctx) => {
 })
 
 bot.command("proyectos", async (ctx) => {
-  if (!db) { await ctx.reply("📡 Offline."); return }
+  const fbError = checkFirebase()
+  if (fbError) { await ctx.reply("⚠️ " + fbError); return }
   try {
-    const snapshot = await db.collection("proyectos").get()
+    const snapshot = await db!.collection("proyectos").get()
     if (snapshot.empty) { await ctx.reply("📋 No hay proyectos."); return }
     let text = "📋 *PROYECTOS:*\n\n"
     snapshot.docs.forEach(doc => { const p = doc.data(); text += `• ${p.name} (${p.tipo})\n` })
@@ -613,7 +598,7 @@ bot.command("equipo", async (ctx) => {
   for (const doc of usuarios.docs) {
     const u = doc.data()
     const tareas = await db.collection("tareas").where("assignedTo", "==", u.nombre).get()
-    const pend = tareas.docs.filter(d => d.data().status === "pendiente").length
+    const pend = tareas.docs.filter(doc => doc.data().status === "pendiente").length
     text += `• ${u.nombre}: ${pend} tareas pendientes\n`
   }
   await ctx.reply(text, { parse_mode: "Markdown" })
@@ -632,7 +617,7 @@ bot.command("memoria", async (ctx) => {
   if (!args) {
     if (!db) { await ctx.reply("📡 Offline."); return }
     const snap = await db.collection("memoria_maestra").get()
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, 10)
+    const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).slice(0, 10)
     await ctx.reply(`🧠 *MEMORIA MAESTRA:*\n\n${data.map((d: any) => `• ${d.titulo} (${d.tipo})`).join("\n")}`, { parse_mode: "Markdown" })
     return
   }
@@ -646,7 +631,7 @@ bot.command("boveda", async (ctx) => {
   if (!args) {
     if (!db) { await ctx.reply("📡 Offline."); return }
     const snap = await db.collection("boveda_maestro").get()
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, 10)
+    const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).slice(0, 10)
     await ctx.reply(`🧠 *BÓVEDA MAESTRA:*\n\n${data.map((d: any) => `• ${d.nombre} (${d.categoria})`).join("\n")}`, { parse_mode: "Markdown" })
     return
   }
@@ -726,7 +711,14 @@ bot.on("message:text", async (ctx) => {
   const txt = ctx.message?.text || ""
   const chatId = ctx.message?.chat?.id
   if (!txt || txt.startsWith("/")) return
-  if (chatId) await saveClient(chatId, ctx.message?.chat?.first_name || "Usuario", txt)
+  
+  const fbError = checkFirebase()
+  if (fbError && chatId !== ADMIN_ID) {
+    await ctx.reply("⚠️ " + fbError)
+    return
+  }
+  
+  if (chatId && firebaseReady) await saveClient(chatId, ctx.message?.chat?.first_name || "Usuario", txt)
   const isGenera = txt.toLowerCase().match(/genera (landing )?de (.+)/)
   if (isGenera) {
     const project = isGenera[2].trim()
@@ -736,6 +728,10 @@ bot.on("message:text", async (ctx) => {
   } else {
     const isTarea = txt.toLowerCase().match(/(?:anota|registra|nueva) tarea? (.+)/)
     if (isTarea) {
+      if (!firebaseReady) {
+        await ctx.reply("⚠️ " + fbError)
+        return
+      }
       const title = isTarea[1].trim()
       await addTask(title)
       await ctx.reply(`✅ *Tarea registrada:* ${title}`, { parse_mode: "Markdown" })
@@ -747,6 +743,11 @@ bot.on("message:text", async (ctx) => {
         const result = await deploying_landing({ nombre, tipo: "inmobiliaria" })
         await ctx.reply(result, { parse_mode: "Markdown" })
       } else {
+        if (!firebaseReady) {
+          const response = await askLLM(txt)
+          await ctx.reply(response)
+          return
+        }
         const { allowed, user: usuario } = await checkAccess(chatId!)
         if (!allowed) {
           await ctx.reply("🔒 *Acceso Denegado*\n\nNo tienes acceso autorizado.\nContacta a Roberto en el Dashboard.", { parse_mode: "Markdown" })
@@ -794,6 +795,12 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
   const url = req.url || "/"
   const pathname = url.split("?")[0]
   
+  if (pathname === "/health") {
+    res.writeHead(200, { "Content-Type": "application/json" })
+    res.end(JSON.stringify({ status: "Claudia alive", firebase: firebaseReady, time: new Date().toISOString() }))
+    return
+  }
+  
   res.setHeader("Access-Control-Allow-Origin", "*")
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
   res.setHeader("Access-Control-Allow-Headers", "Content-Type")
@@ -807,7 +814,7 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
     if (pathname === "/api/clientes") {
       if (!db) { res.writeHead(500, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "NoDB" })); return }
       const snapshot = await db.collection("clientes").get()
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       res.writeHead(200, { "Content-Type": "application/json" })
       res.end(JSON.stringify(data))
       return
@@ -816,7 +823,7 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
     if (pathname === "/api/proyectos") {
       if (!db) { res.writeHead(500, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "NoDB" })); return }
       const snapshot = await db.collection("proyectos").get()
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       res.writeHead(200, { "Content-Type": "application/json" })
       res.end(JSON.stringify(data))
       return
@@ -825,7 +832,7 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
     if (pathname === "/api/tareas") {
       if (!db) { res.writeHead(500, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "NoDB" })); return }
       const snapshot = await db.collection("tareas").get()
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       res.writeHead(200, { "Content-Type": "application/json" })
       res.end(JSON.stringify(data))
       return
@@ -844,7 +851,7 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
       if (!db) { res.writeHead(500, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "NoDB" })); return }
       if (req.method === "GET") {
         const snapshot = await db.collection("usuarios").get()
-        const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
         res.writeHead(200, { "Content-Type": "application/json" })
         res.end(JSON.stringify(data))
         return
@@ -876,7 +883,7 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
       if (req.method === "GET") {
         const q = new URL(url, "http://localhost").searchParams.get("q") || ""
         const snapshot = await db.collection("memoria_maestra").get()
-        let data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+        let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
         if (q) data = data.filter((d: any) => d.titulo?.toLowerCase().includes(q.toLowerCase()))
         res.writeHead(200, { "Content-Type": "application/json" })
         res.end(JSON.stringify(data.slice(0, 20)))
@@ -900,7 +907,7 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
       if (req.method === "GET") {
         const user = new URL(url, "http://localhost").searchParams.get("user")
         let snapshot = await db.collection("tareas").get()
-        let data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+        let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
         if (user) data = data.filter((d: any) => d.assignedTo === user)
         res.writeHead(200, { "Content-Type": "application/json" })
         res.end(JSON.stringify(data))
@@ -951,7 +958,7 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
           return
         }
         const snapshot = await db.collection("boveda_maestro").get()
-        const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
         res.writeHead(200, { "Content-Type": "application/json" })
         res.end(JSON.stringify(data))
         return
@@ -983,7 +990,7 @@ const apiServer = createServer(async (req: IncomingMessage, res: ServerResponse)
     if (pathname === "/api/orquesta") {
       const t = new URL(url, "http://localhost").searchParams.get("t")
       if (t) {
-        const plan = await orchestate(t)
+        const plan = await orchestrate(t)
         res.writeHead(200, { "Content-Type": "application/json" })
         res.end(JSON.stringify({ plan }))
         return
