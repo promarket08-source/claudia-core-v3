@@ -133,7 +133,7 @@ async function searchMemory(query: string): Promise<string> {
            data.contenido?.toLowerCase().includes(query.toLowerCase())
   })
   if (!results.length) return ""
-  return results.slice(0, 3).map(res => `• ${res.data().titulo}: ${res.data().contenido?.slice(0, 100)}...`).join("\n")
+  return results.slice(0, 3).map(r => `• ${r.data().titulo}: ${r.data().contenido?.slice(0, 100)}...`).join("\n")
 }
 
 async function assignTask(assignedTo: string, titulo: string, descripcion: string) {
