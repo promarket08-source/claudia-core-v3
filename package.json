@@ -1,6 +1,7 @@
 {
   "name": "claudia-core-v3",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.ts",
   "dependencies": {
     "grammy": "^1.20.0",
