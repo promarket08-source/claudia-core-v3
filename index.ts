@@ -319,7 +319,7 @@ async function crear_landing(project: string): Promise<string> {
   return `✅ Landing de '${project}' creada!`
 }
 
-async function getTemplate(tipo: string): string {
+async function getTemplate(tipo: string): Promise<string> {
   const tipoMap: Record<string, string> = {
     propiedades: "inmobiliaria", parcela: "inmobiliaria", casa: "inmobiliaria", terreno: "inmobiliaria",
     marketing: "agencia", agencia: "agencia", publicidad: "agencia",
