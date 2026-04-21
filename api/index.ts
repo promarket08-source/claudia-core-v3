@@ -3,15 +3,11 @@ import { initializeApp, cert } from "firebase-admin/app"
 import { getFirestore, Firestore } from "firebase-admin/firestore"
 
 const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN || "")
+const GROQ_API_KEY = process.env.GROQ_API_KEY || ""
+const XAI_API_KEY = process.env.XAI_API_KEY || ""
 const OPENROUTER_KEYS = JSON.parse(process.env.OPENROUTER_KEYS || "[]")
 const MODELS = ["google/gemini-2.0-flash-001", "minimax/minimax-m2.5:free"]
-const WHISPER_KEY = process.env.WHISPER_KEY || ""
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN
-const GITHUB_OWNER = process.env.GITHUB_OWNER || "promarket08-source"
-const VERCEL_TOKEN = process.env.VERCEL_TOKEN
-const SHEETS_KEY = process.env.SHEETS_KEY
-const ADMIN_ID = parseInt(process.env.ADMIN_ID || "8754625349")
-const TAVILY_KEY = process.env.TAVILY_KEY
+const ADMIN_ID = parseInt(process.env.ADMIN_ID || "1811224365")
 
 const SHEET_ID = "1Nda_f9eoD3c8GmIjDbpfQCqBiZyLeaE3lMMTQuOxQoM"
 let db: Firestore | null = null
@@ -110,6 +106,44 @@ HABILIDAD PROACTIVA:
 
 async function askLLM(prompt: string, systemPrompt?: string): Promise<string> {
   const system = systemPrompt || SYSTEM
+  
+  if (GROQ_API_KEY) {
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${GROQ_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "llama-3.1-70b-versatile",
+          messages: [{ role: "system", content: system }, { role: "user", content: prompt }],
+          temperature: 0.7
+        })
+      })
+      const data = await res.json()
+      if (data.choices?.[0]?.message?.content) return data.choices[0].message.content
+    } catch (e) { console.error("Groq error:", e) }
+  }
+  
+  if (XAI_API_KEY) {
+    try {
+      const res = await fetch("https://api.x.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${XAI_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "grok-beta",
+          messages: [{ role: "system", content: system }, { role: "user", content: prompt }]
+        })
+      })
+      const data = await res.json()
+      if (data.choices?.[0]?.message?.content) return data.choices[0].message.content
+    } catch (e) { console.error("xAI error:", e) }
+  }
+  
   for (const key of OPENROUTER_KEYS) {
     for (const model of MODELS) {
       try {
